@@ -1,0 +1,566 @@
+{
+    "id": "9aad531a0abbe359",
+    "type": "subflow",
+    "name": "Security Spy Events",
+    "info": "# node-red-security-spy\n\n## Security Spy Events\nSimple Node-Red Subflow focused on SecuritySpy (NVR) event stream.\n\nNote: No easy way to get camera number, use debug node to get camera number.\n\n## Subflow Environment Variables\n\n```javascript\nPROTOCOL: http:\nHOSTNAME: localhost\nPORT: 8000\nUSERNAME: \nPASSWORD: \nAUTO_CONNECT: true\nRETRY_DURATION: 30\nLOG_EVENTS: false\n```\n\n\nIf `AUTO_CONNECT` is `false` you have to manually inject to trigger connection.\n\n## Output\n\nOutput 1: `connecting`, `connected` or `disconnected`\n\nOutput 2: Stream of parsed events from https://bensoftware.com/securityspy/web-server-spec.html#miscDiv\n\nAll events have;\n\n```JSON\n{\"time\":\"20240928132817\",\"number\":\"0\" ...}\n```\n\nPersonally I've not used these values for anything. `number` resets after re-connection.\n\nHeartbeat\n\n```JSON\n{\"camera\":\"X\",\"event\":\"NULL\",\"info\":\"\"}\n```\n\nIf `camera` is `X` it means heartbeat/ping/keepalive, I use this to ping uptime checker.\n\nFile Written\n\n```JSON\n{\"camera\":\"4\",\"event\":\"FILE\",\"info\":\"/Volumes/Storage/Security Spy/CameraX/{date}.mov\"}\n```\n\nMotion\n\n```JSON\n{\"camera\":\"4\",\"event\":\"MOTION\",\"info\":{\"x\":\"0\",\"y\":\"1538\",\"w\":\"420\",\"h\":\"594\"}}\n```\n\nClassify\n```JSON\n{\"camera\":\"4\",\"event\":\"CLASSIFY\",\"info\":{\"HUMAN\":100,\"VEHICLE\":0,\"ANIMAL\":1}}\n```\n\nMotion End\n```JSON\n{\"time\":\"20240928132616\",\"number\":\"22\",\"camera\":\"4\",\"event\":\"MOTION_END\",\"info\":\"\"}\n```\n\nTrigger\n```JSON\n{\"camera\":\"4\",\"event\":\"TRIGGER_A\",\"info\":\"128\"}\n```\n\nAll events can be found here https://bensoftware.com/securityspy/web-server-spec.html#miscDiv\n\n> Personally I use `TRIGGER_A` in combimation with `MOTION_END` to create a sensor in Home Assistant.",
+    "category": "",
+    "in": [
+        {
+            "x": 80,
+            "y": 260,
+            "wires": [
+                {
+                    "id": "c16cb3f715ccda9b"
+                }
+            ]
+        }
+    ],
+    "out": [
+        {
+            "x": 680,
+            "y": 240,
+            "wires": [
+                {
+                    "id": "2e2c7d382ef31916",
+                    "port": 0
+                }
+            ]
+        },
+        {
+            "x": 1150,
+            "y": 540,
+            "wires": [
+                {
+                    "id": "1dc26dc7b0437665",
+                    "port": 0
+                }
+            ]
+        }
+    ],
+    "env": [
+        {
+            "name": "PROTOCOL",
+            "type": "str",
+            "value": "http:"
+        },
+        {
+            "name": "HOSTNAME",
+            "type": "str",
+            "value": "localhost"
+        },
+        {
+            "name": "PORT",
+            "type": "str",
+            "value": "8000"
+        },
+        {
+            "name": "USERNAME",
+            "type": "str",
+            "value": ""
+        },
+        {
+            "name": "PASSWORD",
+            "type": "str",
+            "value": ""
+        },
+        {
+            "name": "AUTO_CONNECT",
+            "type": "bool",
+            "value": "true"
+        },
+        {
+            "name": "RETRY_DURATION",
+            "type": "str",
+            "value": "30"
+        },
+        {
+            "name": "LOG_EVENTS",
+            "type": "bool",
+            "value": "false"
+        }
+    ],
+    "meta": {
+        "module": "node-red-security-spy-events",
+        "type": "ss-events",
+        "version": "0.0.1",
+        "author": "Luqman",
+        "desc": "Subscribe to Security Spy Event Stream",
+        "keywords": "security spy",
+        "license": "MIT"
+    },
+    "color": "#DDAA99",
+    "outputLabels": [
+        "Stream",
+        "Status"
+    ],
+    "status": {
+        "x": 360,
+        "y": 540,
+        "wires": [
+            {
+                "id": "c16cb3f715ccda9b",
+                "port": 2
+            }
+        ]
+    },
+    "flow": [
+        {
+            "id": "c16cb3f715ccda9b",
+            "type": "function",
+            "z": "9aad531a0abbe359",
+            "name": "Security Spy Stream",
+            "func": "const options = {\n    protocol: env.get('PROTOCOL'),\n    hostname: env.get('HOSTNAME'),\n    port: env.get('PORT'),\n    auth: `${env.get('USERNAME')}:${env.get('PASSWORD')}`,\n    path: '/eventStream?version=3',\n};\n\nconst CONNECTING = { fill: 'blue', shape: 'dot', text: 'connecting' };\nconst CONNECTED = { fill: 'green', shape: 'dot', text: 'connected' };\nconst DISCONNECTED = { fill: 'red', shape: 'ring', text: 'disconnected' };\n\nnode.send([{ payload: 'connecting' }, null, { payload: CONNECTING }]);\n\nhttp.get(options, res => {\n    node.send([{ payload: 'connected' }, null, { payload: CONNECTED }]);\n\n    res.on('data', chunk => {\n        let lines = chunk.toString().trim().split('\\r')\n\n        lines.forEach((line) => {\n            let info = line.split(' ');\n            let core = info.splice(0, 4);\n\n            let { 0: time, 1: number, 2: camera, 3: event } = core;\n\n            node.send([null, { payload: { time, number, camera, event, info: info.join(' ') } }]);\n        })\n    });\n\n    res.on('end', () => {\n        node.send([{ payload: 'disconnected' }, null, { payload: DISCONNECTED }]);\n    });\n}).on('error', () => {\n    node.send([{ payload: 'disconnected' }, null, { payload: DISCONNECTED }]);\n});\n\nreturn msg;",
+            "outputs": 3,
+            "timeout": "",
+            "noerr": 0,
+            "initialize": "",
+            "finalize": "\n",
+            "libs": [
+                {
+                    "var": "http",
+                    "module": "http"
+                },
+                {
+                    "var": "url",
+                    "module": "url"
+                }
+            ],
+            "x": 160,
+            "y": 380,
+            "wires": [
+                [
+                    "2e2c7d382ef31916"
+                ],
+                [
+                    "1c5fa90d11f9fa94"
+                ],
+                []
+            ]
+        },
+        {
+            "id": "34777f3b10d49ce3",
+            "type": "inject",
+            "z": "9aad531a0abbe359",
+            "name": "Trigger Connection",
+            "props": [
+                {
+                    "p": "payload"
+                },
+                {
+                    "p": "topic",
+                    "vt": "str"
+                }
+            ],
+            "repeat": "",
+            "crontab": "",
+            "once": true,
+            "onceDelay": "1",
+            "topic": "",
+            "payload": "",
+            "payloadType": "date",
+            "x": 150,
+            "y": 180,
+            "wires": [
+                [
+                    "bf6af4c13177e14b"
+                ]
+            ]
+        },
+        {
+            "id": "596ad1ef78811b37",
+            "type": "debug",
+            "z": "9aad531a0abbe359",
+            "name": "security#output[2]",
+            "active": true,
+            "tosidebar": true,
+            "console": false,
+            "tostatus": false,
+            "complete": "payload",
+            "targetType": "msg",
+            "statusVal": "",
+            "statusType": "auto",
+            "x": 1390,
+            "y": 600,
+            "wires": []
+        },
+        {
+            "id": "c8367f235a1eb4f0",
+            "type": "debug",
+            "z": "9aad531a0abbe359",
+            "name": "security#output[1]",
+            "active": true,
+            "tosidebar": true,
+            "console": false,
+            "tostatus": false,
+            "complete": "payload",
+            "targetType": "msg",
+            "statusVal": "",
+            "statusType": "auto",
+            "x": 910,
+            "y": 180,
+            "wires": []
+        },
+        {
+            "id": "1c5fa90d11f9fa94",
+            "type": "switch",
+            "z": "9aad531a0abbe359",
+            "name": "",
+            "property": "payload.event",
+            "propertyType": "msg",
+            "rules": [
+                {
+                    "t": "eq",
+                    "v": "MOTION",
+                    "vt": "str"
+                },
+                {
+                    "t": "eq",
+                    "v": "CLASSIFY",
+                    "vt": "str"
+                },
+                {
+                    "t": "else"
+                }
+            ],
+            "checkall": "false",
+            "repair": false,
+            "outputs": 3,
+            "x": 670,
+            "y": 580,
+            "wires": [
+                [
+                    "d6baa05b3d366f42"
+                ],
+                [
+                    "7cc75255e526f287"
+                ],
+                [
+                    "1dc26dc7b0437665"
+                ]
+            ]
+        },
+        {
+            "id": "d6baa05b3d366f42",
+            "type": "function",
+            "z": "9aad531a0abbe359",
+            "name": "Motion Info",
+            "func": "let info = msg.payload.info.split(' ');\n\nmsg.payload.info = { x: info[0], y: info[1], w: info[2], h: info[3] }\n\nreturn msg;",
+            "outputs": 1,
+            "timeout": 0,
+            "noerr": 0,
+            "initialize": "",
+            "finalize": "",
+            "libs": [],
+            "x": 870,
+            "y": 440,
+            "wires": [
+                [
+                    "1dc26dc7b0437665"
+                ]
+            ]
+        },
+        {
+            "id": "7cc75255e526f287",
+            "type": "function",
+            "z": "9aad531a0abbe359",
+            "name": "Classify Info",
+            "func": "msg.payload.info = msg.payload.info.match(/\\w+ \\d+/g).reduce((info, text) => {\n    const [key, value] = text.split(' ');\n    info[key] = +value;\n    return info;\n}, {});\n\nreturn msg;",
+            "outputs": 1,
+            "timeout": 0,
+            "noerr": 0,
+            "initialize": "",
+            "finalize": "",
+            "libs": [],
+            "x": 870,
+            "y": 480,
+            "wires": [
+                [
+                    "1dc26dc7b0437665"
+                ]
+            ]
+        },
+        {
+            "id": "77f919ed8ad33ebe",
+            "type": "switch",
+            "z": "9aad531a0abbe359",
+            "name": "LOG_EVENTS",
+            "property": "LOG_EVENTS",
+            "propertyType": "env",
+            "rules": [
+                {
+                    "t": "true"
+                }
+            ],
+            "checkall": "true",
+            "repair": false,
+            "outputs": 1,
+            "x": 700,
+            "y": 180,
+            "wires": [
+                [
+                    "c8367f235a1eb4f0"
+                ]
+            ]
+        },
+        {
+            "id": "017c53ae2471779b",
+            "type": "switch",
+            "z": "9aad531a0abbe359",
+            "name": "Log Events",
+            "property": "LOG_EVENTS",
+            "propertyType": "env",
+            "rules": [
+                {
+                    "t": "true"
+                }
+            ],
+            "checkall": "true",
+            "repair": false,
+            "outputs": 1,
+            "x": 1170,
+            "y": 600,
+            "wires": [
+                [
+                    "596ad1ef78811b37"
+                ]
+            ]
+        },
+        {
+            "id": "f491889665870cfc",
+            "type": "comment",
+            "z": "9aad531a0abbe359",
+            "name": "Sub-flow Status",
+            "info": "",
+            "x": 300,
+            "y": 580,
+            "wires": []
+        },
+        {
+            "id": "57fc6bb75ffd4612",
+            "type": "comment",
+            "z": "9aad531a0abbe359",
+            "name": "Connection Status",
+            "info": "",
+            "x": 710,
+            "y": 280,
+            "wires": []
+        },
+        {
+            "id": "d656f32dd15e881a",
+            "type": "comment",
+            "z": "9aad531a0abbe359",
+            "name": "Security Spy Event",
+            "info": "",
+            "x": 1190,
+            "y": 500,
+            "wires": []
+        },
+        {
+            "id": "4ce2fbda3ddd8178",
+            "type": "delay",
+            "z": "9aad531a0abbe359",
+            "name": "Retry Connection",
+            "pauseType": "delayv",
+            "timeout": "30",
+            "timeoutUnits": "seconds",
+            "rate": "1",
+            "nbRateUnits": "1",
+            "rateUnits": "second",
+            "randomFirst": "1",
+            "randomLast": "5",
+            "randomUnits": "seconds",
+            "drop": false,
+            "allowrate": false,
+            "outputs": 1,
+            "x": 1130,
+            "y": 360,
+            "wires": [
+                [
+                    "7fa011daf6fb0ccd",
+                    "2eb8e5cd4c548f65"
+                ]
+            ]
+        },
+        {
+            "id": "7fa011daf6fb0ccd",
+            "type": "link out",
+            "z": "9aad531a0abbe359",
+            "name": "Security Spy Connect",
+            "mode": "link",
+            "links": [
+                "9628b0f4f232a4f2"
+            ],
+            "x": 1295,
+            "y": 260,
+            "wires": []
+        },
+        {
+            "id": "6f02aa8132a07392",
+            "type": "switch",
+            "z": "9aad531a0abbe359",
+            "name": "Disonnected",
+            "property": "payload",
+            "propertyType": "msg",
+            "rules": [
+                {
+                    "t": "eq",
+                    "v": "disconnected",
+                    "vt": "str"
+                }
+            ],
+            "checkall": "false",
+            "repair": false,
+            "outputs": 1,
+            "x": 690,
+            "y": 360,
+            "wires": [
+                [
+                    "d516145ce7fc3c5e"
+                ]
+            ]
+        },
+        {
+            "id": "d516145ce7fc3c5e",
+            "type": "change",
+            "z": "9aad531a0abbe359",
+            "name": "",
+            "rules": [
+                {
+                    "t": "set",
+                    "p": "payload",
+                    "pt": "msg",
+                    "to": "RETRY_DURATION",
+                    "tot": "env"
+                }
+            ],
+            "action": "",
+            "property": "",
+            "from": "",
+            "to": "",
+            "reg": false,
+            "x": 900,
+            "y": 360,
+            "wires": [
+                [
+                    "4ce2fbda3ddd8178"
+                ]
+            ]
+        },
+        {
+            "id": "9628b0f4f232a4f2",
+            "type": "link in",
+            "z": "9aad531a0abbe359",
+            "name": "Security Spy Connect",
+            "links": [
+                "7fa011daf6fb0ccd"
+            ],
+            "x": 255,
+            "y": 260,
+            "wires": [
+                [
+                    "4ce3140f93de77d9"
+                ]
+            ]
+        },
+        {
+            "id": "4923ce69e8eb5fae",
+            "type": "debug",
+            "z": "9aad531a0abbe359",
+            "name": "security#retry",
+            "active": true,
+            "tosidebar": true,
+            "console": false,
+            "tostatus": false,
+            "complete": "payload",
+            "targetType": "msg",
+            "statusVal": "",
+            "statusType": "auto",
+            "x": 1560,
+            "y": 360,
+            "wires": []
+        },
+        {
+            "id": "2eb8e5cd4c548f65",
+            "type": "switch",
+            "z": "9aad531a0abbe359",
+            "name": "Log Events",
+            "property": "LOG_EVENTS",
+            "propertyType": "env",
+            "rules": [
+                {
+                    "t": "true"
+                }
+            ],
+            "checkall": "true",
+            "repair": false,
+            "outputs": 1,
+            "x": 1350,
+            "y": 360,
+            "wires": [
+                [
+                    "4923ce69e8eb5fae"
+                ]
+            ]
+        },
+        {
+            "id": "bf6af4c13177e14b",
+            "type": "switch",
+            "z": "9aad531a0abbe359",
+            "name": "AUTO_CONNECT",
+            "property": "AUTO_CONNECT",
+            "propertyType": "env",
+            "rules": [
+                {
+                    "t": "true"
+                }
+            ],
+            "checkall": "true",
+            "repair": false,
+            "outputs": 1,
+            "x": 390,
+            "y": 180,
+            "wires": [
+                [
+                    "4ce3140f93de77d9"
+                ]
+            ]
+        },
+        {
+            "id": "2e2c7d382ef31916",
+            "type": "junction",
+            "z": "9aad531a0abbe359",
+            "x": 420,
+            "y": 340,
+            "wires": [
+                [
+                    "77f919ed8ad33ebe",
+                    "6f02aa8132a07392"
+                ]
+            ]
+        },
+        {
+            "id": "1dc26dc7b0437665",
+            "type": "junction",
+            "z": "9aad531a0abbe359",
+            "x": 1040,
+            "y": 600,
+            "wires": [
+                [
+                    "017c53ae2471779b"
+                ]
+            ]
+        },
+        {
+            "id": "4ce3140f93de77d9",
+            "type": "junction",
+            "z": "9aad531a0abbe359",
+            "x": 400,
+            "y": 260,
+            "wires": [
+                [
+                    "c16cb3f715ccda9b"
+                ]
+            ]
+        }
+    ]
+}

@@ -1,0 +1,36 @@
+{
+  "name": "@luqman/node-red-security-spy",
+  "version": "0.0.15",
+  "main": "security-spy-events.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luqman/node-red-security-spy.git"
+  },
+  "keywords": [
+    "node-red",
+    "security-spy",
+    "node-red-security-spy"
+  ],
+  "author": "Luqman",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/luqman/node-red-security-spy/issues"
+  },
+  "homepage": "https://github.com/luqman/node-red-security-spy#readme",
+  "description": "Simple Node-Red Subflow focused on SecuritySpy (NVR) event stream.",
+  "node-red": {
+    "version": ">=4.0.0",
+    "nodes": {
+      "ss-events": "ss-events.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
