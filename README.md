@@ -62,7 +62,7 @@ Classify
 
 Motion End
 ```JSON
-{"time":"20240928132616","number":"22","camera":"4","event":"MOTION_END","info":""}
+{"camera":"4","event":"MOTION_END","info":""}
 ```
 
 Trigger

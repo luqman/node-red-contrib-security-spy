@@ -1,0 +1,165 @@
+[
+    {
+        "id": "34ac0df7faa08ac1",
+        "type": "tab",
+        "label": "Example",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "bb2c72ef3045fa4e",
+        "type": "ss-events",
+        "z": "34ac0df7faa08ac1",
+        "name": "",
+        "PROTOCOL": "http:",
+        "HOSTNAME": "192.168.1.10",
+        "PORT": "8000",
+        "USERNAME": "home",
+        "PASSWORD": "password",
+        "AUTO_CONNECT": true,
+        "RETRY_DURATION": "30",
+        "LOG_EVENTS": false,
+        "x": 140,
+        "y": 60,
+        "wires": [
+            [],
+            [
+                "41b9195f3f87f3e9"
+            ]
+        ]
+    },
+    {
+        "id": "41b9195f3f87f3e9",
+        "type": "switch",
+        "z": "34ac0df7faa08ac1",
+        "name": "Pick Camera",
+        "property": "payload.camera",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "X",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "1",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "2",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "3",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "4",
+                "vt": "str"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 5,
+        "x": 390,
+        "y": 180,
+        "wires": [
+            [
+                "d698ea45a5c1cca8"
+            ],
+            [],
+            [],
+            [],
+            [
+                "fc520244133d6edd",
+                "46c491c394ab921a"
+            ]
+        ]
+    },
+    {
+        "id": "fc520244133d6edd",
+        "type": "switch",
+        "z": "34ac0df7faa08ac1",
+        "name": "Pick EVENT",
+        "property": "payload.event",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "FILE",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "MOTION",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "CLASSIFY",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "MOTION_END",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "TRIGGER_A",
+                "vt": "str"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 5,
+        "x": 610,
+        "y": 340,
+        "wires": [
+            [],
+            [],
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "46c491c394ab921a",
+        "type": "debug",
+        "z": "34ac0df7faa08ac1",
+        "name": "camera#4",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 600,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "d698ea45a5c1cca8",
+        "type": "debug",
+        "z": "34ac0df7faa08ac1",
+        "name": "heartbeat",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 600,
+        "y": 120,
+        "wires": []
+    }
+]

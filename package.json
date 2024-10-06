@@ -1,6 +1,6 @@
 {
   "name": "@luqman/node-red-security-spy",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "main": "security-spy-events.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
